@@ -8,6 +8,8 @@ import type {
   InteractionResultResponse,
   GamificationProfile,
   LeaderboardEntry,
+  UserStats,
+  RecentActivityItem,
 } from '@/types'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'
@@ -88,4 +90,14 @@ export const leaderboardApi = {
 
   getUserRank: (tier: string, userId: string) =>
     request<LeaderboardEntry>(`/api/v1/leaderboard/${tier}/users/${userId}`),
+}
+
+// ─── User Stats ───────────────────────────────────────────────────────────────
+
+export const userApi = {
+  getStats: (userId: string) =>
+    request<UserStats>(`/api/v1/users/${userId}/stats`),
+
+  getRecentActivity: (userId: string) =>
+    request<RecentActivityItem[]>(`/api/v1/users/${userId}/recent-activity`),
 }

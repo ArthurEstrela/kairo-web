@@ -113,7 +113,7 @@ export function Sidebar() {
               {name ?? 'Usuário'}
             </p>
             <p className="text-xs text-muted-foreground">
-              {tier === 'PREMIUM' ? 'Membro Pro' : 'Plano Gratuito'}
+              {tier === 'DIAMOND' || tier === 'PLATINUM' ? 'Membro Pro' : 'Plano Gratuito'}
             </p>
           </div>
         </button>

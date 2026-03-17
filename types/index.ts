@@ -24,6 +24,7 @@ export interface SkillResponse {
   id: string
   name: string
   description: string
+  difficultyLevel: number  // 0=Iniciante 1=Intermediário 2=Avançado
 }
 
 export interface ChallengeResponse {
@@ -69,6 +70,24 @@ export interface LeaderboardEntry {
   username: string
   xp: number
   rank: number
+}
+
+// ─── User Stats ───────────────────────────────────────────────────────────────
+
+export interface DayActivity {
+  day: string
+  count: number
+}
+
+export interface UserStats {
+  completedChallenges: number
+  weeklyActivity: DayActivity[]
+}
+
+export interface RecentActivityItem {
+  description: string
+  timeAgo: string
+  score: number
 }
 
 // ─── UI helpers ───────────────────────────────────────────────────────────────
