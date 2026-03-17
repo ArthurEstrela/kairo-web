@@ -6,7 +6,6 @@ import { useAuthStore } from '@/store/useAuthStore'
 import { useGamificationStore } from '@/store/useGamificationStore'
 import { gamificationApi } from '@/lib/api'
 import { Sidebar } from '@/components/features/layout/Sidebar'
-import { TopBar } from '@/components/features/layout/TopBar'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router          = useRouter()
@@ -38,12 +37,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <Sidebar />
 
-      <div className="flex flex-col flex-1 min-w-0">
-        <TopBar />
-        <main className="flex-1 overflow-y-auto scrollbar-thin p-6">
-          {children}
-        </main>
-      </div>
+      <main className="flex-1 min-w-0 overflow-y-auto scrollbar-thin p-6">
+        {children}
+      </main>
     </div>
   )
 }
