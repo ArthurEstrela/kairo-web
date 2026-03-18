@@ -40,7 +40,6 @@ export function useChatWebSocket({
 
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: 'AUTH', token }))
-      ws.send(JSON.stringify({ type: 'INIT', challengeId }))
     }
 
     ws.onmessage = async (event) => {
@@ -48,6 +47,10 @@ export function useChatWebSocket({
       try { msg = JSON.parse(event.data as string) } catch { return }
 
       switch (msg.type) {
+        case 'AUTH_ACK':
+          ws.send(JSON.stringify({ type: 'INIT', challengeId }))
+          break
+
         case 'CHUNK':
           onChunk(msg.delta as string, isNewBubbleRef.current)
           isNewBubbleRef.current = false

@@ -35,8 +35,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   })
 
   if (!res.ok) {
-    const body = await res.text().catch(() => res.statusText)
-    throw new Error(body || `HTTP ${res.status}`)
+    const body = await res.text().catch(() => '')
+    let parsedError: { error?: string } = {}
+    try { parsedError = JSON.parse(body) } catch { parsedError = { error: body } }
+    throw Object.assign(new Error(parsedError.error || `HTTP ${res.status}`), { status: res.status, body: parsedError })
   }
 
   if (res.status === 204) return undefined as T

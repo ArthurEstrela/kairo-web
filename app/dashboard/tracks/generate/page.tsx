@@ -19,12 +19,8 @@ export default function GenerateTrackPage() {
       const { id } = await tracksApi.generate(goal.trim())
       router.push(`/dashboard/tracks/${id}`)
     } catch (err: unknown) {
-      try {
-        const body = JSON.parse((err as Error).message)
-        setError(body.error ?? 'Não foi possível gerar a trilha. Tenta de novo.')
-      } catch {
-        setError('Não foi possível gerar a trilha. Tenta de novo.')
-      }
+      const apiErr = err as { body?: { error?: string }, message?: string }
+      setError(apiErr.body?.error ?? apiErr.message ?? 'Não foi possível gerar a trilha. Tenta de novo.')
     } finally {
       setLoading(false)
     }
