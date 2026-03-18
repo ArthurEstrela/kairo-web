@@ -34,6 +34,45 @@ export interface ChallengeResponse {
   xpReward: number
   levelOrder: number
   type: 'ROLEPLAY' | 'QUIZ'
+  maxTurns: number
+  status: ChallengeStatus | null
+}
+
+// ─── Tracks ──────────────────────────────────────────────────────────────────
+export type ChallengeStatus = 'COMPLETED' | 'ACTIVE' | 'LOCKED'
+
+export interface TrackChallengeResponse {
+  id: string
+  title: string
+  xpReward: number
+  levelOrder: number
+  maxTurns: number
+  status: ChallengeStatus
+  bestScore: number
+}
+
+export interface TrackWithChallengesResponse {
+  id: string
+  title: string
+  description: string
+  challenges: TrackChallengeResponse[]
+}
+
+export interface MyTracksResponse {
+  totalCount: number
+  tracks: TrackWithChallengesResponse[]
+}
+
+export interface GenerateTrackResponse {
+  id: string
+}
+
+// ─── Arena ───────────────────────────────────────────────────────────────────
+export interface WsResultPayload {
+  interactionId: string
+  score: number
+  xpAwarded: number
+  livesRemaining: number
 }
 
 export interface SubmitInteractionRequest {

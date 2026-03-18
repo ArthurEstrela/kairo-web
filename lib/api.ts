@@ -10,6 +10,9 @@ import type {
   LeaderboardEntry,
   UserStats,
   RecentActivityItem,
+  GenerateTrackResponse,
+  MyTracksResponse,
+  TrackWithChallengesResponse,
 } from '@/types'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'
@@ -100,4 +103,27 @@ export const userApi = {
 
   getRecentActivity: (userId: string) =>
     request<RecentActivityItem[]>(`/api/v1/users/${userId}/recent-activity`),
+}
+
+// ─── Tracks ──────────────────────────────────────────────────────────────────
+export const tracksApi = {
+  generate: (goal: string) =>
+    request<GenerateTrackResponse>('/api/v1/tracks/generate', {
+      method: 'POST',
+      body: JSON.stringify({ goal }),
+    }),
+
+  getMy: () => request<MyTracksResponse>('/api/v1/tracks/my'),
+
+  getById: (trackId: string) =>
+    request<TrackWithChallengesResponse>(`/api/v1/tracks/${trackId}`),
+
+  publish: (trackId: string) =>
+    request<void>(`/api/v1/tracks/${trackId}/publish`, { method: 'PATCH' }),
+
+  complete: (challengeId: string, interactionId: string) =>
+    request<void>(`/api/v1/challenges/${challengeId}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({ interactionId }),
+    }),
 }

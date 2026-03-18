@@ -12,11 +12,13 @@ import {
   BarChart2,
   Users,
   Brain,
+  Map,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
   { href: '/dashboard/dashboard',   label: 'Painel',                 icon: LayoutDashboard },
   { href: '/dashboard/skills',      label: 'Trilhas de Aprendizado', icon: BookOpen },
+  { href: '/dashboard/tracks',      label: 'Trilhas',                icon: Map },
   { href: '/dashboard/simulations', label: 'Simulações',             icon: Play },
   { href: '/dashboard/profile',     label: 'Progresso',              icon: BarChart2 },
   { href: '/dashboard/league',      label: 'Comunidade',             icon: Users },
