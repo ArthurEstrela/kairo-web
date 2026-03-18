@@ -1,241 +1,221 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
+import { useParams, useSearchParams, useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { useChallengeStore } from '@/store/useChallengeStore'
-import { useGamificationStore } from '@/store/useGamificationStore'
-import { challengeApi } from '@/lib/api'
-import { ChatWindow } from '@/components/features/challenge/ChatWindow'
-import { XpAnimation } from '@/components/features/gamification/XpAnimation'
-import type { ChatMessage, InteractionResultResponse } from '@/types'
-import { ArrowLeft, Send, Heart, Zap, MessageSquare, HelpCircle } from 'lucide-react'
+import { useChatWebSocket } from '@/hooks/useChatWebSocket'
+import type { TrackWithChallengesResponse } from '@/types'
 
-function makeId() {
-  return Math.random().toString(36).slice(2)
-}
+export default function ArenaPage() {
+  const params = useParams<{ id: string }>()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const trackId = searchParams.get('trackId')
+  const queryClient = useQueryClient()
 
-const OPENING_MESSAGE = (title: string, type: string): ChatMessage => ({
-  id: makeId(),
-  role: 'ai',
-  content: type === 'ROLEPLAY'
-    ? `Welcome to the simulation: "${title}". I'm your AI counterpart. State your case clearly and persuasively — I'll respond in character. Begin whenever you're ready.`
-    : `Quiz challenge: "${title}". Read the scenario carefully and type your best answer. Your response will be evaluated on argumentation, confidence, and persuasion. Go ahead!`,
-  timestamp: new Date(),
-})
+  const store = useChallengeStore()
+  const [messages, setMessages] = useState<{ role: 'ai' | 'user'; content: string }[]>([])
+  const [inputValue, setInputValue] = useState('')
+  const [isInputEnabled, setIsInputEnabled] = useState(false)
+  const [resultModal, setResultModal] = useState<{ score: number; xp: number; lives: number } | null>(null)
+  const [completeError, setCompleteError] = useState<'409' | 'network' | null>(null)
+  const bottomRef = useRef<HTMLDivElement>(null)
 
-export default function ChallengePage() {
-  const router    = useRouter()
-  const challenge = useChallengeStore((s) => s.current)
-  const { lives, xp, updateAfterChallenge } = useGamificationStore()
-
-  const [messages, setMessages]   = useState<ChatMessage[]>(() =>
-    challenge ? [OPENING_MESSAGE(challenge.title, challenge.type)] : []
-  )
-  const [input, setInput]         = useState('')
-  const [loading, setLoading]     = useState(false)
-  const [result, setResult]       = useState<InteractionResultResponse | null>(null)
-  const [xpVisible, setXpVisible] = useState(false)
-  const [showModal, setShowModal] = useState(false)
-  const inputRef                  = useRef<HTMLTextAreaElement>(null)
-
-  // If user navigated directly without a challenge in store
-  if (!challenge) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full gap-4">
-        <p className="text-muted-foreground">No challenge selected.</p>
-        <button onClick={() => router.back()} className="text-primary text-sm hover:underline">
-          ← Go back
-        </button>
-      </div>
-    )
-  }
-
-  // Captured after guard — TypeScript now knows this is non-null in all inner functions
-  const activeChallenge = challenge
-
-  async function handleSubmit() {
-    if (!input.trim() || loading) return
-
-    const userMsg: ChatMessage = {
-      id: makeId(),
-      role: 'user',
-      content: input.trim(),
-      timestamp: new Date(),
+  useEffect(() => {
+    if (!trackId) {
+      router.push('/dashboard')
     }
+    return () => { store.clear() }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-    setMessages((prev) => [...prev, userMsg])
-    setInput('')
-    setLoading(true)
+  useEffect(() => {
+    const cached = queryClient.getQueryData<TrackWithChallengesResponse>(['track', trackId])
+    if (cached) {
+      const challenge = cached.challenges?.find((c) => c.id === params.id)
+      if (challenge?.maxTurns) store.setMaxTurns(challenge.maxTurns)
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-    try {
-      const res = await challengeApi.evaluate({
-        challengeId: activeChallenge.id,
-        userInput: userMsg.content,
+  const { sendTurn } = useChatWebSocket({
+    challengeId: params.id,
+    trackId: trackId ?? '',
+    onChunk: (delta, isNew) => {
+      setMessages((prev) => {
+        if (isNew || prev.length === 0 || prev[prev.length - 1].role !== 'ai') {
+          return [...prev, { role: 'ai', content: delta }]
+        }
+        const updated = [...prev]
+        updated[updated.length - 1] = {
+          ...updated[updated.length - 1],
+          content: updated[updated.length - 1].content + delta,
+        }
+        return updated
       })
+    },
+    onTurnAck: () => setIsInputEnabled(true),
+    onDisconnect: () => {
+      alert('Ligação perdida. O desafio foi reiniciado.')
+      router.push(`/dashboard/tracks/${trackId}`)
+    },
+    onResult: (score, xp, lives) => {
+      setIsInputEnabled(false)
+      setResultModal({ score, xp, lives })
+      queryClient.invalidateQueries({ queryKey: ['track', trackId] })
+    },
+    onCompleteError: (type) => setCompleteError(type),
+  })
 
-      const aiMsg: ChatMessage = {
-        id: makeId(),
-        role: 'ai',
-        content: res.feedbackMessage,
-        timestamp: new Date(),
-      }
-
-      setMessages((prev) => [...prev, aiMsg])
-      setResult(res)
-      updateAfterChallenge(res.totalXp, res.livesRemaining)
-      setXpVisible(true)
-
-      // Fire confetti for great scores
-      if (res.scoreObtained >= 70) {
-        const confetti = (await import('canvas-confetti')).default
-        confetti({
-          particleCount: 120,
-          spread: 80,
-          origin: { y: 0.6 },
-          colors: ['#2259E4', '#6D2BD9', '#0790DF', '#ffffff'],
-        })
-      }
-
-      setTimeout(() => setShowModal(true), 800)
-    } catch {
-      const errMsg: ChatMessage = {
-        id: makeId(),
-        role: 'ai',
-        content: 'Something went wrong evaluating your response. Please try again.',
-        timestamp: new Date(),
-      }
-      setMessages((prev) => [...prev, errMsg])
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    if (store.maxTurns > 0 && !isInputEnabled && !resultModal) {
+      const id = setTimeout(() => setIsInputEnabled(true), 0)
+      return () => clearTimeout(id)
     }
+  }, [store.maxTurns]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  function handleSend() {
+    const text = inputValue.trim()
+    if (!text || !isInputEnabled) return
+    setMessages((prev) => [...prev, { role: 'user', content: text }])
+    setInputValue('')
+    setIsInputEnabled(false)
+    sendTurn(text)
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSubmit()
-    }
-  }
+  const progress = store.maxTurns > 0
+    ? (store.currentTurn / store.maxTurns) * 100
+    : 0
 
-  function handleTryAgain() {
-    setMessages([OPENING_MESSAGE(activeChallenge.title, activeChallenge.type)])
-    setResult(null)
-    setShowModal(false)
-    setXpVisible(false)
-    inputRef.current?.focus()
-  }
-
-  const scoreColor = (score: number) =>
-    score >= 80 ? 'text-green-400' : score >= 60 ? 'text-yellow-400' : 'text-red-400'
+  if (!trackId) return null
 
   return (
-    <div className="h-full flex flex-col max-w-3xl mx-auto">
-      {/* XP toast */}
-      <XpAnimation
-        xpGained={result ? result.totalXp - xp : 0}
-        visible={xpVisible}
-        onComplete={() => setXpVisible(false)}
-      />
-
+    <div className="flex flex-col h-full max-w-2xl mx-auto p-4">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4 shrink-0">
+      <div className="flex items-center gap-3 mb-4">
         <button
-          onClick={() => router.back()}
-          className="size-9 glass rounded-lg flex items-center justify-center hover:bg-white/8 transition-colors"
+          onClick={() => router.push(`/dashboard/tracks/${trackId}`)}
+          className="w-9 h-9 bg-white/6 border border-white/8 rounded-xl flex items-center justify-center text-muted-foreground text-sm hover:bg-white/10"
         >
-          <ArrowLeft className="size-4" />
+          ←
         </button>
-
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm truncate">{challenge.title}</p>
-          <div className="flex items-center gap-2">
-            <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${
-              challenge.type === 'ROLEPLAY' ? 'bg-primary/15 text-primary' : 'bg-accent/15 text-accent'
-            }`}>
-              {challenge.type === 'ROLEPLAY'
-                ? <><MessageSquare className="size-3 inline mr-1" />Roleplay</>
-                : <><HelpCircle className="size-3 inline mr-1" />Quiz</>
-              }
-            </span>
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <Zap className="size-3" />{challenge.xpReward} XP
-            </span>
-          </div>
-        </div>
-
-        {/* Lives */}
-        <div className="flex gap-1 shrink-0">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Heart key={i} className={`size-4 ${i < lives ? 'text-red-400 fill-red-400' : 'text-muted-foreground/30'}`} />
-          ))}
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-foreground">
+            {store.current?.title ?? 'Desafio'}
+          </p>
+          <p className="text-xs text-muted-foreground">Roleplay · +{store.current?.xpReward ?? 0} XP</p>
         </div>
       </div>
 
-      {/* Chat area */}
-      <div className="flex-1 glass rounded-xl flex flex-col overflow-hidden min-h-0">
-        <ChatWindow messages={messages} isLoading={loading} />
-
-        {/* Input */}
-        <div className="border-t border-white/5 p-3 flex gap-2 items-end shrink-0">
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type your response… (Enter to send, Shift+Enter for new line)"
-            disabled={loading || !!result}
-            rows={2}
-            className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 resize-none transition-colors disabled:opacity-40 scrollbar-thin"
-          />
-          <button
-            onClick={handleSubmit}
-            disabled={!input.trim() || loading || !!result}
-            className="size-10 btn-gradient rounded-lg flex items-center justify-center hover:opacity-90 disabled:opacity-30 transition-opacity shrink-0"
-          >
-            <Send className="size-4 text-white" />
-          </button>
+      {/* Progress bar */}
+      {store.maxTurns > 0 && (
+        <div className="mb-4">
+          <div className="flex justify-between items-center mb-1.5">
+            <span className="text-xs font-bold text-indigo-400 uppercase tracking-wide">Progresso</span>
+            <span className="text-xs font-bold text-foreground">
+              Turno {store.currentTurn} / {store.maxTurns}
+            </span>
+          </div>
+          <div className="h-1.5 bg-white/6 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${progress}%`,
+                background: 'linear-gradient(90deg, #2259E4, #6D2BD9)',
+              }}
+            />
+          </div>
         </div>
+      )}
+
+      {/* Chat area */}
+      <div className="flex-1 overflow-y-auto bg-white/2 border border-white/6 rounded-2xl p-4 space-y-3 mb-4 min-h-0">
+        {messages.map((msg, idx) => (
+          <div
+            key={idx}
+            className={`flex gap-2.5 max-w-[88%] ${msg.role === 'user' ? 'self-end ml-auto flex-row-reverse' : ''}`}
+          >
+            <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs
+              ${msg.role === 'ai'
+                ? 'bg-gradient-to-br from-blue-800 to-purple-800'
+                : 'bg-gradient-to-br from-gray-700 to-gray-900'}`}>
+              {msg.role === 'ai' ? '🤖' : '👤'}
+            </div>
+            <div className={`rounded-xl px-3 py-2 text-xs leading-relaxed
+              ${msg.role === 'ai'
+                ? 'bg-white/5 border border-indigo-500/20 text-gray-300 rounded-bl-sm'
+                : 'bg-blue-500/12 border border-blue-500/25 text-blue-200 rounded-br-sm'}`}>
+              {msg.content}
+            </div>
+          </div>
+        ))}
+        {messages.length === 0 && (
+          <div className="flex items-center gap-2 p-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div className="flex gap-2 items-end">
+        <textarea
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
+          }}
+          placeholder={isInputEnabled ? 'A tua resposta… (Enter para enviar)' : 'Aguarda…'}
+          disabled={!isInputEnabled}
+          rows={2}
+          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-foreground resize-none outline-none focus:border-blue-500/50 disabled:opacity-40"
+        />
+        <button
+          onClick={handleSend}
+          disabled={!isInputEnabled || !inputValue.trim()}
+          className="w-11 h-11 rounded-xl btn-gradient flex items-center justify-center text-white text-base disabled:opacity-40 shrink-0"
+        >
+          →
+        </button>
       </div>
 
       {/* Result modal */}
-      {showModal && result && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-          <div className="glass rounded-2xl p-8 max-w-sm w-full glow-blue animate-slide-up text-center space-y-5">
-            <div className="text-5xl">{result.scoreObtained >= 80 ? '🏆' : result.scoreObtained >= 60 ? '👍' : '💪'}</div>
-
-            <div>
-              <p className="text-muted-foreground text-sm mb-1">Your Score</p>
-              <p className={`text-5xl font-bold ${scoreColor(result.scoreObtained)}`}>
-                {result.scoreObtained}
+      {resultModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-[oklch(0.14_0.02_264)] border border-white/10 rounded-2xl p-6 max-w-sm w-full text-center">
+            <div className="text-5xl mb-3">{resultModal.score >= 70 ? '🏆' : resultModal.score >= 60 ? '✅' : '😓'}</div>
+            <h2 className="text-xl font-bold text-foreground mb-1">
+              {resultModal.score >= 70 ? 'Excelente!' : resultModal.score >= 60 ? 'Concluído!' : 'Tenta de novo'}
+            </h2>
+            <p className="text-3xl font-bold text-indigo-400 mb-2">{resultModal.score}%</p>
+            {resultModal.xp > 0 && (
+              <p className="text-sm text-emerald-400 mb-1">+{resultModal.xp} XP ganhos!</p>
+            )}
+            <p className="text-xs text-muted-foreground mb-4">❤️ {resultModal.lives} vidas restantes</p>
+            {completeError === '409' && (
+              <p className="text-xs text-red-400 bg-red-400/10 rounded-xl px-3 py-2 mb-3">
+                Não foi possível registar. Inicia de novo.
               </p>
-              <p className="text-xs text-muted-foreground mt-1">out of 100</p>
-            </div>
-
-            <div className="flex justify-center gap-4 text-sm">
-              <div className="text-center">
-                <p className="gradient-text font-bold">+{challenge.xpReward}</p>
-                <p className="text-xs text-muted-foreground">XP</p>
-              </div>
-              <div className="text-center">
-                <p className="text-red-400 font-bold">{result.livesRemaining}</p>
-                <p className="text-xs text-muted-foreground">Lives left</p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
+            )}
+            {completeError === 'network' && (
               <button
-                onClick={handleTryAgain}
-                className="flex-1 glass rounded-xl py-2.5 text-sm font-medium hover:bg-white/8 transition-colors"
+                onClick={() => setCompleteError(null)}
+                className="w-full text-xs text-amber-400 border border-amber-400/20 rounded-xl py-2 mb-3"
               >
-                Try Again
+                Tentar registar de novo
               </button>
-              <button
-                onClick={() => router.push('/dashboard/dashboard')}
-                className="flex-1 btn-gradient rounded-xl py-2.5 text-white text-sm font-medium hover:opacity-90 transition-opacity"
-              >
-                Dashboard
-              </button>
-            </div>
+            )}
+            <button
+              onClick={() => router.push(`/dashboard/tracks/${trackId}`)}
+              className="w-full btn-gradient text-white text-sm font-semibold py-2.5 rounded-xl"
+            >
+              Ver Mapa
+            </button>
           </div>
         </div>
       )}
