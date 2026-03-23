@@ -9,8 +9,10 @@ interface AuthState {
   name: string | null
   email: string | null
   isAuthenticated: boolean
+  _hasHydrated: boolean
   setAuth: (auth: { token: string; userId: string; name: string; email: string }) => void
   logout: () => void
+  setHasHydrated: (v: boolean) => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -21,6 +23,9 @@ export const useAuthStore = create<AuthState>()(
       name: null,
       email: null,
       isAuthenticated: false,
+      _hasHydrated: false,
+
+      setHasHydrated: (v) => set({ _hasHydrated: v }),
 
       setAuth: ({ token, userId, name, email }) => {
         if (typeof window !== 'undefined') {
@@ -38,6 +43,9 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'kairo_auth',
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true)
+      },
       partialize: (state) => ({
         token: state.token,
         userId: state.userId,

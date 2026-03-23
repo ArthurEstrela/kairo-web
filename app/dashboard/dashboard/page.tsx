@@ -14,7 +14,15 @@ export default function DashboardPage() {
   const { name, userId } = useAuthStore()
   const { xp, streak, tier } = useGamificationStore()
   const { data: skills = [], isLoading } = useQuery({ queryKey: ['skills'], queryFn: skillsApi.getAll })
-  const { data: myRank } = useQuery({ queryKey: ['my-rank', tier, userId], queryFn: () => leaderboardApi.getUserRank(tier, userId!), enabled: !!userId, retry: false })
+  const { data: myRank } = useQuery({
+    queryKey: ['my-rank', tier, userId],
+    queryFn: () =>
+      leaderboardApi.getUserRank(tier, userId!).catch((err) =>
+        err?.status === 404 ? null : Promise.reject(err)
+      ),
+    enabled: !!userId,
+    retry: false,
+  })
   const { data: stats } = useQuery({ queryKey: ['user-stats', userId], queryFn: () => userApi.getStats(userId!), enabled: !!userId })
   const { data: recentActivity = [] } = useQuery({ queryKey: ['recent-activity', userId], queryFn: () => userApi.getRecentActivity(userId!), enabled: !!userId })
   const firstName = name?.split(' ')[0] ?? 'Usuário'
@@ -26,13 +34,13 @@ export default function DashboardPage() {
   const metaPct = Math.min(Math.round(((xp - tierMin) / (tierMax - tierMin)) * 100), 100)
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-slide-up">
+    <div className="max-w-6xl mx-auto space-y-5 animate-slide-up">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Painel</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Bem-vindo de volta! Continue sua jornada de aprendizado</p>
+          <h1 className="text-xl md:text-2xl font-bold">Painel</h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-0.5 hidden sm:block">Bem-vindo de volta! Continue sua jornada de aprendizado</p>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="hidden sm:flex items-center gap-3 shrink-0">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
             <input type="text" placeholder="Buscar..." className="h-9 pl-9 pr-4 rounded-xl bg-white/5 border border-white/10 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 w-48 transition-colors" />
@@ -44,15 +52,15 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-2xl p-6" style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)' }}>
+      <div className="relative overflow-hidden rounded-2xl p-4 md:p-6" style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%)' }}>
         <div className="pointer-events-none absolute -top-10 -right-10 w-52 h-52 rounded-full bg-white/5" />
         <div className="pointer-events-none absolute -bottom-14 right-28 w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold text-white">Bem-vindo de volta, {firstName}! 👋</h2>
-            <p className="text-sm text-white/60 mt-1">Você está no caminho certo para atingir sua meta semanal de aprendizado</p>
+            <h2 className="text-lg md:text-xl font-bold text-white">Bem-vindo, {firstName}! 👋</h2>
+            <p className="text-xs text-white/60 mt-0.5 hidden sm:block">Você está no caminho certo para atingir sua meta semanal</p>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
             <HeroPill icon={<Trophy className="size-4 text-yellow-300" />} label="Ranking" value={rankLabel} />
             <HeroPill icon={<Zap className="size-4 text-blue-300" />} label="XP" value={xp.toLocaleString()} />
             <HeroPill icon={<Target className="size-4 text-cyan-300" />} label="Meta" value={metaPct + '%'} />
@@ -60,7 +68,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <StatCard icon={<Flame className="size-5 text-white" />} iconGradient="from-orange-500 to-pink-500" label="Sequência de Aprendizado" value={String(streak)} unit="dias" progress={Math.min((streak / 30) * 100, 100)} />
         <StatCard icon={<Award className="size-5 text-white" />} iconGradient="from-blue-500 to-violet-500" label="Desafios Completados" value={String(completedChallenges)} unit="desafios" progress={totalSkills > 0 ? Math.min((completedChallenges / Math.max(totalSkills * 2, 1)) * 100, 100) : 0} />
         <StatCard icon={<Clock className="size-5 text-white" />} iconGradient="from-cyan-500 to-blue-500" label="Trilhas Disponíveis" value={String(totalSkills)} unit="trilhas" progress={100} />
@@ -68,26 +76,26 @@ export default function DashboardPage() {
       </div>
 
       <div>
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex items-start justify-between mb-3 md:mb-4">
           <div>
-            <h2 className="text-lg font-semibold">Trilhas de Aprendizado Recomendadas</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">Personalizadas com base no seu progresso e interesses</p>
+            <h2 className="text-base md:text-lg font-semibold">Trilhas Recomendadas</h2>
+            <p className="text-xs text-muted-foreground mt-0.5 hidden sm:block">Personalizadas com base no seu progresso e interesses</p>
           </div>
           <button className="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 shrink-0 mt-1">Ver Todas <ChevronRight className="size-4" /></button>
         </div>
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">{[1, 2, 3].map((i) => <SkeletonCard key={i} />)}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">{[1, 2, 3].map((i) => <SkeletonCard key={i} />)}</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">{skills.slice(0, 3).map((skill, idx) => <SkillTrackCard key={skill.id} skill={skill} index={idx} />)}</div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">{skills.slice(0, 3).map((skill, idx) => <SkillTrackCard key={skill.id} skill={skill} index={idx} />)}</div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
         <WeeklyActivityCard weeklyActivity={stats?.weeklyActivity ?? []} />
         <RecentActivityCard items={recentActivity} />
       </div>
 
-      <div className="card-hold rounded-2xl p-10 text-center space-y-3">
+      <div className="card-hold rounded-2xl p-6 md:p-10 text-center space-y-3">
         <h3 className="text-xl font-bold">Pronto para seu próximo desafio?</h3>
         <p className="text-sm text-muted-foreground">Inicie uma nova simulação e coloque suas habilidades à prova</p>
         <button className="mt-2 px-8 py-3 rounded-xl btn-gradient text-white text-sm font-semibold hover:opacity-90 transition-opacity">Iniciar Simulação</button>
@@ -110,11 +118,11 @@ function HeroPill({ icon, label, value }: { icon: React.ReactNode; label: string
 
 function StatCard({ icon, iconGradient, label, value, unit, progress }: { icon: React.ReactNode; iconGradient: string; label: string; value: string; unit: string; progress: number }) {
   return (
-    <div className="card-hold rounded-2xl p-5 space-y-4">
-      <div className={cn('size-10 rounded-xl flex items-center justify-center bg-gradient-to-br', iconGradient)}>{icon}</div>
+    <div className="card-hold rounded-2xl p-4 md:p-5 space-y-3 md:space-y-4">
+      <div className={cn('size-8 md:size-10 rounded-xl flex items-center justify-center bg-gradient-to-br', iconGradient)}>{icon}</div>
       <div>
-        <p className="text-xs text-muted-foreground leading-snug">{label}</p>
-        <p className="text-2xl font-bold mt-1.5">{value} <span className="text-sm font-normal text-muted-foreground">{unit}</span></p>
+        <p className="text-[11px] md:text-xs text-muted-foreground leading-snug">{label}</p>
+        <p className="text-xl md:text-2xl font-bold mt-1">{value} <span className="text-xs md:text-sm font-normal text-muted-foreground">{unit}</span></p>
       </div>
       <div className="h-1 rounded-full bg-white/10 overflow-hidden">
         <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500 transition-all duration-700" style={{ width: progress + '%' }} />

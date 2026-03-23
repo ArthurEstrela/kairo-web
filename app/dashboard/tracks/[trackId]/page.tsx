@@ -86,7 +86,7 @@ export default function TrackMapPage() {
 
   if (isLoading) {
     return (
-      <div className="p-8 max-w-xl">
+      <div className="max-w-xl mx-auto">
         <div className="h-7 w-56 bg-white/5 rounded-xl animate-pulse mb-2" />
         <div className="space-y-3 mt-6">
           {[...Array(3)].map((_, i) => (
@@ -98,11 +98,11 @@ export default function TrackMapPage() {
   }
 
   if (error || !track) {
-    return <div className="p-8"><p className="text-red-400 text-sm">Trilha não encontrada.</p></div>
+    return <div className="max-w-xl mx-auto"><p className="text-red-400 text-sm">Trilha não encontrada.</p></div>
   }
 
   return (
-    <div className="p-8 max-w-xl">
+    <div className="max-w-xl mx-auto">
       {noLives && (
         <div className="mb-4 p-3 bg-amber-400/10 border border-amber-400/20 rounded-xl">
           <p className="text-sm text-amber-400">

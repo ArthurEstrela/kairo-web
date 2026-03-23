@@ -27,7 +27,7 @@ export default function GenerateTrackPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+    <div className="flex flex-col items-center justify-center min-h-[60vh]">
       <div className="w-full max-w-xl">
         <h1 className="text-2xl font-bold text-foreground mb-2">Nova Trilha de Aprendizado</h1>
         <p className="text-sm text-muted-foreground mb-6">

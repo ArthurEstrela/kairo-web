@@ -163,7 +163,7 @@ export default function ArenaPage() {
       </div>
 
       {/* Input */}
-      <div className="flex gap-2 items-end">
+      <div className="flex gap-2 items-end pb-16 md:pb-0">
         <textarea
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}

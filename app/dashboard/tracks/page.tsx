@@ -12,7 +12,7 @@ export default function MyTracksPage() {
 
   if (isLoading) {
     return (
-      <div className="p-8">
+      <div className="max-w-2xl mx-auto">
         <div className="h-8 w-48 bg-white/5 rounded-xl animate-pulse mb-6" />
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
@@ -25,14 +25,14 @@ export default function MyTracksPage() {
 
   if (error) {
     return (
-      <div className="p-8">
+      <div className="max-w-2xl mx-auto">
         <p className="text-red-400 text-sm">Erro ao carregar trilhas.</p>
       </div>
     )
   }
 
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-foreground">As Minhas Trilhas</h1>
@@ -50,7 +50,7 @@ export default function MyTracksPage() {
         </Link>
       </div>
 
-      {!data?.tracks.length ? (
+      {!data?.tracks?.length ? (
         <div className="text-center py-16">
           <p className="text-muted-foreground text-sm mb-4">Ainda não tens trilhas.</p>
           <Link
