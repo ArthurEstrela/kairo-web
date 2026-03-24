@@ -13,6 +13,8 @@ import type {
   GenerateTrackResponse,
   MyTracksResponse,
   TrackWithChallengesResponse,
+  CheckoutSessionResponse,
+  SessionStatusResponse,
 } from '@/types'
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'
@@ -128,4 +130,15 @@ export const tracksApi = {
       method: 'POST',
       body: JSON.stringify({ interactionId }),
     }),
+}
+
+// ─── Subscriptions ───────────────────────────────────────────────────────────
+export const subscriptionApi = {
+  createCheckout: () =>
+    request<CheckoutSessionResponse>('/api/v1/subscriptions/checkout', {
+      method: 'POST',
+    }),
+
+  getSession: (sessionId: string) =>
+    request<SessionStatusResponse>(`/api/v1/subscriptions/session/${sessionId}`),
 }

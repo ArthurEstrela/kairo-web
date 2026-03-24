@@ -100,6 +100,8 @@ export interface GamificationProfile {
   currentStreak: number
   tier: LeagueTier
   lastLifeLostAt: string | null
+  availableTrackGenerations: number | null  // null = Premium unlimited
+  quotaResetDate: string | null
 }
 
 // ─── Leaderboard ─────────────────────────────────────────────────────────────
@@ -136,4 +138,16 @@ export interface ChatMessage {
   role: 'ai' | 'user'
   content: string
   timestamp: Date
+}
+
+// ─── Stripe Checkout ─────────────────────────────────────────────────────────
+
+export interface CheckoutSessionResponse {
+  clientSecret: string
+}
+
+export type SessionStatus = 'complete' | 'open' | 'expired'
+
+export interface SessionStatusResponse {
+  status: SessionStatus
 }
