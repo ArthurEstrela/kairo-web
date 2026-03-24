@@ -27,8 +27,14 @@ export default function UpgradePage() {
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
   const fetchClientSecret = useCallback(async () => {
-    const res = await subscriptionApi.createCheckout()
-    return res.clientSecret
+    try {
+      const res = await subscriptionApi.createCheckout()
+      return res.clientSecret
+    } catch {
+      setCheckoutError('Não foi possível iniciar o checkout. Tenta de novo.')
+      setShowCheckout(false)
+      return ''
+    }
   }, [])
 
   function handleUpgradeClick() {

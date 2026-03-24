@@ -16,11 +16,10 @@ export default function GenerateTrackPage() {
 
   const isPremium = availableTrackGenerations === null
   const isExhausted = !isPremium && availableTrackGenerations === 0
-  const canGenerate = isPremium || (availableTrackGenerations !== null && availableTrackGenerations > 0)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!goal.trim() || !canGenerate) return
+    if (!goal.trim() || isExhausted) return
     setLoading(true)
     setError(null)
     try {
