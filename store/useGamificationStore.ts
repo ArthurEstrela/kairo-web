@@ -10,6 +10,8 @@ interface GamificationState {
   streak: number
   tier: LeagueTier
   loaded: boolean
+  availableTrackGenerations: number | null
+  quotaResetDate: string | null
   setProfile: (profile: GamificationProfile) => void
   updateAfterChallenge: (xp: number, lives: number) => void
 }
@@ -21,6 +23,8 @@ export const useGamificationStore = create<GamificationState>((set) => ({
   streak: 0,
   tier: 'BRONZE',
   loaded: false,
+  availableTrackGenerations: 3,
+  quotaResetDate: null,
 
   setProfile: (profile) =>
     set({
@@ -30,6 +34,8 @@ export const useGamificationStore = create<GamificationState>((set) => ({
       streak: profile.currentStreak,
       tier: profile.tier,
       loaded: true,
+      availableTrackGenerations: profile.availableTrackGenerations,
+      quotaResetDate: profile.quotaResetDate,
     }),
 
   updateAfterChallenge: (xp, lives) => set({ xp, lives }),
