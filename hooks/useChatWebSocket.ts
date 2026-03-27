@@ -13,7 +13,7 @@ type HookOptions = {
   trackId: string
   onChunk: (delta: string, isNew: boolean) => void
   onTurnAck: () => void
-  onResult: (score: number, xpAwarded: number, livesRemaining: number) => void
+  onResult: (score: number, xpAwarded: number, livesRemaining: number, interactionId: string) => void
   onCompleteError: (type: '409' | 'network') => void
   onDisconnect?: () => void
 }
@@ -33,10 +33,21 @@ export function useChatWebSocket({
   const store = useChallengeStore()
   const wsRef = useRef<WebSocket | null>(null)
   const isNewBubbleRef = useRef(true)
+  const errorHandledRef = useRef(false)
 
   useEffect(() => {
     const ws = new WebSocket(`${WS_URL}/api/v1/chat/stream`)
     wsRef.current = ws
+
+    // Timeout: if we haven't received INIT_ACK within 30s, treat as disconnect
+    const connectionTimeout = setTimeout(() => {
+      if (ws.readyState !== WebSocket.OPEN) return
+      // Still haven't received INIT_ACK — server is not responding
+      errorHandledRef.current = true
+      ws.close()
+      store.clear()
+      onDisconnect?.()
+    }, 30_000)
 
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: 'AUTH', token }))
@@ -57,6 +68,7 @@ export function useChatWebSocket({
           break
 
         case 'INIT_ACK':
+          clearTimeout(connectionTimeout)
           store.setMaxTurns(msg.maxTurns as number)
           isNewBubbleRef.current = true
           break
@@ -74,7 +86,7 @@ export function useChatWebSocket({
             xpAwarded: number
             livesRemaining: number
           }
-          onResult(score, xpAwarded, livesRemaining)
+          onResult(score, xpAwarded, livesRemaining, interactionId)
           tracksApi.complete(challengeId, interactionId).catch((err: Error) => {
             if (err.message.includes('409') || err.message.includes('Sessão não encontrada')) {
               onCompleteError('409')
@@ -87,6 +99,7 @@ export function useChatWebSocket({
 
         case 'ERROR': {
           const code = msg.code as string
+          errorHandledRef.current = true
           store.clear()
           if (code === 'NO_LIVES') {
             router.push(`/dashboard/tracks/${trackId}?noLives=1`)
@@ -104,13 +117,16 @@ export function useChatWebSocket({
     }
 
     ws.onclose = (event) => {
-      if (event.code !== 1000) {
+      if (event.code !== 1000 && !errorHandledRef.current) {
         store.clear()
         onDisconnect?.()
       }
+      errorHandledRef.current = false
     }
 
     return () => {
+      clearTimeout(connectionTimeout)
+      errorHandledRef.current = true  // prevent onclose from calling onDisconnect on intentional cleanup
       ws.close()
     }
   }, [challengeId]) // eslint-disable-line react-hooks/exhaustive-deps

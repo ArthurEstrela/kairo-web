@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/useAuthStore'
 import { authApi } from '@/lib/api'
-import { Sword, Eye, EyeOff } from 'lucide-react'
+import { Sword, Eye, EyeOff, ArrowRight } from 'lucide-react'
 
 export default function RegisterPage() {
   const router  = useRouter()
@@ -22,7 +22,7 @@ export default function RegisterPage() {
     e.preventDefault()
     setError(null)
     if (password.length < 8) {
-      setError('Password must be at least 8 characters.')
+      setError('A palavra-passe deve ter pelo menos 8 caracteres.')
       return
     }
     setLoading(true)
@@ -31,67 +31,86 @@ export default function RegisterPage() {
       setAuth({ token: data.token, userId: data.userId, name: data.name, email: data.email })
       router.push('/dashboard/dashboard')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed. Try again.')
+      setError(err instanceof Error ? err.message : 'Registo falhou. Tenta de novo.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="w-full max-w-sm px-6 animate-slide-up">
-      {/* Logo */}
-      <div className="flex flex-col items-center mb-8">
-        <div className="size-12 rounded-xl btn-gradient flex items-center justify-center glow-blue mb-3">
-          <Sword className="size-6 text-white" />
+    <>
+      {/* Mobile-only logo */}
+      <div className="flex items-center gap-2.5 mb-8 lg:hidden animate-fade-in-up">
+        <div className="size-9 rounded-xl btn-gradient flex items-center justify-center glow-blue">
+          <Sword className="size-4 text-white" />
         </div>
-        <h1 className="text-2xl font-bold">Create your account</h1>
-        <p className="text-sm text-muted-foreground mt-1">Start training your soft skills today</p>
+        <span className="text-lg font-bold" style={{ fontFamily: 'var(--font-display)' }}>KAIRO</span>
       </div>
 
-      <form onSubmit={handleSubmit} className="glass rounded-2xl p-6 space-y-4">
+      {/* Heading */}
+      <div className="mb-8 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
+        <h1
+          className="text-4xl font-extrabold leading-[1.08] tracking-tight"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          Cria a tua<br />conta.
+        </h1>
+        <p className="text-sm text-muted-foreground mt-2.5">
+          Começa a treinar as tuas soft skills hoje.
+        </p>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-5">
         {/* Name */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Full Name</label>
+        <div className="animate-fade-in-up" style={{ animationDelay: '0.10s' }}>
+          <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">
+            Nome Completo
+          </label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Arthur Menezes"
             required
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/30 transition-colors"
+            className="auth-input w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-sm placeholder:text-muted-foreground/40 text-foreground"
           />
         </div>
 
         {/* Email */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Email</label>
+        <div className="animate-fade-in-up" style={{ animationDelay: '0.16s' }}>
+          <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">
+            Email
+          </label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder="tu@exemplo.com"
             required
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/30 transition-colors"
+            className="auth-input w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-sm placeholder:text-muted-foreground/40 text-foreground"
           />
         </div>
 
         {/* Password */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Password</label>
+        <div className="animate-fade-in-up" style={{ animationDelay: '0.22s' }}>
+          <label className="block text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">
+            Palavra-passe
+          </label>
           <div className="relative">
             <input
               type={showPw ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Min. 8 characters"
+              placeholder="Mín. 8 caracteres"
               required
               minLength={8}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 pr-10 text-sm placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/30 transition-colors"
+              className="auth-input w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 pr-12 text-sm placeholder:text-muted-foreground/40 text-foreground"
             />
             <button
               type="button"
               onClick={() => setShowPw((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
             >
               {showPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
             </button>
@@ -100,27 +119,41 @@ export default function RegisterPage() {
 
         {/* Error */}
         {error && (
-          <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2">
+          <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3 animate-fade-in-up">
             {error}
           </p>
         )}
 
         {/* Submit */}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full btn-gradient py-2.5 rounded-lg text-white text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity"
-        >
-          {loading ? 'Creating account…' : 'Create Account'}
-        </button>
+        <div className="animate-fade-in-up pt-1" style={{ animationDelay: '0.28s' }}>
+          <button
+            type="submit"
+            disabled={loading}
+            className="relative w-full btn-gradient py-3 rounded-xl text-white text-sm font-semibold overflow-hidden group disabled:opacity-50 flex items-center justify-center gap-2"
+            style={{ boxShadow: '0 4px 24px oklch(0.50 0.22 264 / 30%)' }}
+          >
+            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
+            <span>{loading ? 'A criar conta…' : 'Criar Conta'}</span>
+            {!loading && <ArrowRight className="size-4 group-hover:translate-x-0.5 transition-transform" />}
+          </button>
+        </div>
       </form>
 
-      <p className="text-center text-sm text-muted-foreground mt-5">
-        Already have an account?{' '}
-        <Link href="/login" className="text-primary hover:underline font-medium">
-          Sign in
+      {/* Terms note */}
+      <p className="text-center text-[11px] text-muted-foreground/60 mt-4 leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.33s' }}>
+        Ao criar conta aceitas os nossos{' '}
+        <span className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors">Termos de Serviço</span>
+        {' '}e{' '}
+        <span className="text-muted-foreground hover:text-foreground cursor-pointer transition-colors">Política de Privacidade</span>.
+      </p>
+
+      {/* Footer link */}
+      <p className="text-center text-sm text-muted-foreground mt-5 animate-fade-in-up" style={{ animationDelay: '0.38s' }}>
+        Já tens conta?{' '}
+        <Link href="/login" className="text-primary hover:text-primary/80 font-semibold transition-colors underline-offset-4 hover:underline">
+          Entra aqui
         </Link>
       </p>
-    </div>
+    </>
   )
 }

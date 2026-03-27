@@ -17,11 +17,13 @@ import type {
   SessionStatusResponse,
 } from '@/types'
 
+import { useAuthStore } from '@/store/useAuthStore'
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080'
 
 function getToken(): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem('kairo_token')
+  return useAuthStore.getState().token
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -85,8 +87,8 @@ export const challengeApi = {
 // ─── Gamification ─────────────────────────────────────────────────────────────
 
 export const gamificationApi = {
-  getProfile: (userId: string) =>
-    request<GamificationProfile>(`/api/v1/gamification/profile/${userId}`),
+  getProfile: () =>
+    request<GamificationProfile>(`/api/v1/gamification/profile`),
 }
 
 // ─── Leaderboard ──────────────────────────────────────────────────────────────
@@ -95,18 +97,18 @@ export const leaderboardApi = {
   getTopN: (tier: string, top = 10) =>
     request<LeaderboardEntry[]>(`/api/v1/leaderboard/${tier}?top=${top}`),
 
-  getUserRank: (tier: string, userId: string) =>
-    request<LeaderboardEntry>(`/api/v1/leaderboard/${tier}/users/${userId}`),
+  getMyRank: (tier: string) =>
+    request<LeaderboardEntry>(`/api/v1/leaderboard/${tier}/me`),
 }
 
 // ─── User Stats ───────────────────────────────────────────────────────────────
 
 export const userApi = {
-  getStats: (userId: string) =>
-    request<UserStats>(`/api/v1/users/${userId}/stats`),
+  getStats: () =>
+    request<UserStats>(`/api/v1/users/me/stats`),
 
-  getRecentActivity: (userId: string) =>
-    request<RecentActivityItem[]>(`/api/v1/users/${userId}/recent-activity`),
+  getRecentActivity: () =>
+    request<RecentActivityItem[]>(`/api/v1/users/me/recent-activity`),
 }
 
 // ─── Tracks ──────────────────────────────────────────────────────────────────

@@ -18,16 +18,10 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 
-const DIFFICULTY: Record<number, { label: string; cls: string }> = {
-  0: { label: 'Iniciante',     cls: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' },
-  1: { label: 'Intermediário', cls: 'bg-blue-500/15 text-blue-300 border border-blue-500/30' },
-  2: { label: 'Avançado',      cls: 'bg-orange-500/15 text-orange-300 border border-orange-500/30' },
-}
-
-const DIFFICULTY_DOT: Record<number, string> = {
-  0: 'bg-emerald-400',
-  1: 'bg-blue-400',
-  2: 'bg-orange-400',
+const DIFFICULTY: Record<number, { label: string; cls: string; dot: string }> = {
+  0: { label: 'Iniciante',     cls: 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/25', dot: 'bg-emerald-400' },
+  1: { label: 'Intermediário', cls: 'bg-blue-500/15 text-blue-300 border border-blue-500/25',          dot: 'bg-blue-400'    },
+  2: { label: 'Avançado',      cls: 'bg-orange-500/15 text-orange-300 border border-orange-500/25',    dot: 'bg-orange-400'  },
 }
 
 export default function SkillsPage() {
@@ -38,16 +32,23 @@ export default function SkillsPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 animate-slide-up">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <BookOpen className="size-6 text-primary" />
+        <h1
+          className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          <div className="size-8 rounded-xl btn-gradient flex items-center justify-center shrink-0" style={{ boxShadow: '0 4px 16px oklch(0.50 0.22 264 / 35%)' }}>
+            <BookOpen className="size-4 text-white" />
+          </div>
           Catálogo de Skills
         </h1>
-        <p className="text-muted-foreground text-sm mt-1">
+        <p className="text-sm text-muted-foreground mt-1.5">
           Escolhe uma skill para praticar e completa os desafios em ordem.
         </p>
       </div>
 
+      {/* Content */}
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
@@ -55,11 +56,12 @@ export default function SkillsPage() {
           ))}
         </div>
       ) : skills.length === 0 ? (
-        <div className="text-center py-20 text-muted-foreground text-sm">
-          Nenhuma skill disponível por agora.
+        <div className="text-center py-20">
+          <BookOpen className="size-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Nenhuma skill disponível por agora.</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {skills.map((skill) => (
             <SkillAccordion key={skill.id} skill={skill} />
           ))}
@@ -78,24 +80,24 @@ function SkillAccordion({ skill }: { skill: SkillResponse }) {
       className={cn(
         'rounded-2xl border transition-all duration-200',
         open
-          ? 'border-white/12 bg-white/4'
-          : 'border-white/6 bg-white/2 hover:bg-white/4 hover:border-white/10'
+          ? 'bg-white/4 border-white/10'
+          : 'bg-white/2.5 border-white/6 hover:bg-white/4 hover:border-white/8'
       )}
+      style={open ? { borderLeft: '2px solid oklch(0.55 0.22 264 / 60%)' } : undefined}
     >
-      {/* Header */}
       <button
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center gap-4 px-5 py-4 text-left"
       >
-        <div
-          className={cn(
-            'size-2.5 rounded-full shrink-0 mt-0.5',
-            DIFFICULTY_DOT[skill.difficultyLevel] ?? 'bg-blue-400'
-          )}
-        />
+        <div className={cn('size-2.5 rounded-full shrink-0', diff.dot)} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-foreground">{skill.name}</span>
+            <span
+              className="text-sm font-semibold text-foreground"
+              style={open ? { fontFamily: 'var(--font-display)' } : undefined}
+            >
+              {skill.name}
+            </span>
             <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-medium', diff.cls)}>
               {diff.label}
             </span>
@@ -109,7 +111,6 @@ function SkillAccordion({ skill }: { skill: SkillResponse }) {
         )}
       </button>
 
-      {/* Challenges list */}
       {open && <ChallengeList skillId={skill.id} />}
     </div>
   )
@@ -126,7 +127,7 @@ function ChallengeList({ skillId }: { skillId: string }) {
 
   function handleStart(challenge: ChallengeResponse) {
     setCurrent(challenge)
-    router.push(`/dashboard/challenge/${challenge.id}`)
+    router.push(`/dashboard/challenge/${challenge.id}?trackId=${skillId}`)
   }
 
   if (isLoading) {
@@ -149,7 +150,7 @@ function ChallengeList({ skillId }: { skillId: string }) {
   }
 
   return (
-    <div className="px-5 pb-4 pt-1 space-y-2">
+    <div className="px-5 pb-4 pt-1 space-y-1.5">
       <div className="h-px bg-white/6 mb-3" />
       {challenges
         .sort((a, b) => a.levelOrder - b.levelOrder)
@@ -174,21 +175,20 @@ function ChallengeRow({
   index: number
   onStart: () => void
 }) {
-  const status = challenge.status
-  const isLocked = status === 'LOCKED'
-  const isCompleted = status === 'COMPLETED'
+  const isLocked    = challenge.status === 'LOCKED'
+  const isCompleted = challenge.status === 'COMPLETED'
 
   return (
     <div
       className={cn(
-        'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors',
+        'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150',
         isLocked
-          ? 'opacity-50 cursor-not-allowed'
+          ? 'opacity-40 cursor-not-allowed'
           : 'hover:bg-white/5 cursor-pointer group'
       )}
       onClick={isLocked ? undefined : onStart}
     >
-      {/* Order / status icon */}
+      {/* Status badge */}
       <div
         className={cn(
           'size-7 rounded-full flex items-center justify-center shrink-0 text-xs font-bold',
@@ -208,6 +208,7 @@ function ChallengeRow({
         )}
       </div>
 
+      {/* Title + meta */}
       <div className="flex-1 min-w-0">
         <p className={cn('text-sm font-medium truncate', isLocked ? 'text-muted-foreground' : 'text-foreground')}>
           {challenge.title}
@@ -218,9 +219,7 @@ function ChallengeRow({
             +{challenge.xpReward} XP
           </span>
           {challenge.maxTurns > 0 && (
-            <span className="text-[10px] text-muted-foreground">
-              · {challenge.maxTurns} turnos
-            </span>
+            <span className="text-[10px] text-muted-foreground">· {challenge.maxTurns} turnos</span>
           )}
         </div>
       </div>
@@ -231,7 +230,7 @@ function ChallengeRow({
             'size-4 shrink-0 transition-colors',
             isCompleted
               ? 'text-emerald-400 group-hover:text-emerald-300'
-              : 'text-primary group-hover:text-primary/80'
+              : 'text-primary group-hover:text-blue-300'
           )}
         />
       )}

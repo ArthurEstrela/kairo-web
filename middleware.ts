@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 
 // Redirect /login and /register → /public/login and /public/register
 // so users can use the shorter URLs
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   if (pathname === '/login') {

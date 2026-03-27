@@ -5,6 +5,7 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { useChallengeStore } from '@/store/useChallengeStore'
 import { useChatWebSocket } from '@/hooks/useChatWebSocket'
+import { tracksApi } from '@/lib/api'
 import type { TrackWithChallengesResponse } from '@/types'
 
 export default function ArenaPage() {
@@ -20,6 +21,8 @@ export default function ArenaPage() {
   const [isInputEnabled, setIsInputEnabled] = useState(false)
   const [resultModal, setResultModal] = useState<{ score: number; xp: number; lives: number } | null>(null)
   const [completeError, setCompleteError] = useState<'409' | 'network' | null>(null)
+  const [disconnectError, setDisconnectError] = useState(false)
+  const pendingCompleteRef = useRef<{ challengeId: string; interactionId: string } | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -55,12 +58,12 @@ export default function ArenaPage() {
     },
     onTurnAck: () => setIsInputEnabled(true),
     onDisconnect: () => {
-      alert('Ligação perdida. O desafio foi reiniciado.')
-      router.push(`/dashboard/tracks/${trackId}`)
+      setDisconnectError(true)
     },
-    onResult: (score, xp, lives) => {
+    onResult: (score, xp, lives, interactionId) => {
       setIsInputEnabled(false)
       setResultModal({ score, xp, lives })
+      pendingCompleteRef.current = { challengeId: params.id, interactionId }
       queryClient.invalidateQueries({ queryKey: ['track', trackId] })
     },
     onCompleteError: (type) => setCompleteError(type),
@@ -91,6 +94,21 @@ export default function ArenaPage() {
     : 0
 
   if (!trackId) return null
+
+  if (disconnectError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 max-w-md mx-auto text-center p-4">
+        <p className="text-lg font-semibold">Ligação perdida</p>
+        <p className="text-sm text-muted-foreground">A sessão foi interrompida. Podes tentar de novo.</p>
+        <button
+          onClick={() => router.push(trackId ? `/dashboard/tracks/${trackId}` : '/dashboard')}
+          className="btn-gradient text-white text-sm font-semibold px-6 py-2.5 rounded-xl"
+        >
+          Voltar à Trilha
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col h-full max-w-2xl mx-auto p-4">
@@ -204,7 +222,18 @@ export default function ArenaPage() {
             )}
             {completeError === 'network' && (
               <button
-                onClick={() => setCompleteError(null)}
+                onClick={() => {
+                  const pending = pendingCompleteRef.current
+                  if (!pending) return
+                  setCompleteError(null)
+                  tracksApi.complete(pending.challengeId, pending.interactionId).catch((err: Error) => {
+                    if (err.message.includes('409')) {
+                      setCompleteError('409')
+                    } else {
+                      setCompleteError('network')
+                    }
+                  })
+                }}
                 className="w-full text-xs text-amber-400 border border-amber-400/20 rounded-xl py-2 mb-3"
               >
                 Tentar registar de novo

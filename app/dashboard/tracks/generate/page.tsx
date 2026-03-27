@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { tracksApi } from '@/lib/api'
+import { tracksApi, gamificationApi } from '@/lib/api'
 import { useGamificationStore } from '@/store/useGamificationStore'
+import { Sparkles, ArrowRight, Zap, AlertTriangle } from 'lucide-react'
 
 export default function GenerateTrackPage() {
   const router = useRouter()
@@ -12,9 +13,9 @@ export default function GenerateTrackPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const { availableTrackGenerations } = useGamificationStore()
+  const { availableTrackGenerations, setProfile } = useGamificationStore()
 
-  const isPremium = availableTrackGenerations === null
+  const isPremium  = availableTrackGenerations === null
   const isExhausted = !isPremium && availableTrackGenerations === 0
 
   async function handleSubmit(e: React.FormEvent) {
@@ -24,9 +25,10 @@ export default function GenerateTrackPage() {
     setError(null)
     try {
       const { id } = await tracksApi.generate(goal.trim())
+      gamificationApi.getProfile().then(setProfile).catch(() => {/* silent */})
       router.push(`/dashboard/tracks/${id}`)
     } catch (err: unknown) {
-      const apiErr = err as { body?: { error?: string; detail?: string }, message?: string }
+      const apiErr = err as { body?: { error?: string; detail?: string }; message?: string }
       const detail = apiErr.body?.detail ?? apiErr.body?.error ?? apiErr.message
       if ((err as { status?: number }).status === 429) {
         setError('Atingiste o limite mensal de trilhas. Faz upgrade para Premium para gerar mais.')
@@ -38,73 +40,119 @@ export default function GenerateTrackPage() {
     }
   }
 
+  const quotaPct = isPremium ? 100 : ((availableTrackGenerations ?? 0) / 3) * 100
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh]">
-      <div className="w-full max-w-xl">
-        <h1 className="text-2xl font-bold text-foreground mb-2">Nova Trilha de Aprendizado</h1>
-        <p className="text-sm text-muted-foreground mb-4">
-          Descreve o que queres aprender e a IA cria uma trilha personalizada para ti.
-        </p>
+    <div className="min-h-[70vh] flex items-center justify-center animate-slide-up">
+      <div className="w-full max-w-xl space-y-6">
+
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <div
+            className="size-14 rounded-2xl btn-gradient flex items-center justify-center mx-auto animate-glow-pulse"
+          >
+            <Sparkles className="size-6 text-white" />
+          </div>
+          <h1
+            className="text-2xl font-extrabold tracking-tight"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            Nova Trilha de Aprendizado
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Descreve o que queres aprender e a IA cria uma trilha personalizada para ti.
+          </p>
+        </div>
 
         {/* Quota indicator */}
-        {isPremium ? (
-          <div className="flex items-center gap-2 mb-5 text-xs text-emerald-400 font-medium">
-            <span>✓</span>
-            <span>Gerações ilimitadas (Premium)</span>
-          </div>
-        ) : isExhausted ? (
-          <div className="mb-5 p-3 bg-amber-400/10 border border-amber-400/20 rounded-xl">
-            <p className="text-sm text-amber-400 font-medium mb-1">Limite mensal atingido</p>
-            <p className="text-xs text-amber-300/80">
-              Volta no próximo mês ou{' '}
-              <Link href="/dashboard/upgrade" className="underline font-semibold hover:text-amber-200">
-                faz upgrade para Premium
-              </Link>{' '}
-              para gerações ilimitadas.
-            </p>
-          </div>
-        ) : (
-          <div className="mb-5">
-            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
-              <span>{availableTrackGenerations} de 3 trilhas restantes este mês</span>
-              <Link href="/dashboard/upgrade" className="text-blue-400 hover:text-blue-300 transition-colors">
-                Upgrade →
-              </Link>
+        <div
+          className="rounded-2xl px-5 py-4"
+          style={{
+            background: 'oklch(0.14 0.018 264)',
+            border: '1px solid oklch(1 0 0 / 7%)',
+          }}
+        >
+          {isPremium ? (
+            <div className="flex items-center gap-2 text-emerald-400">
+              <Zap className="size-4" />
+              <span className="text-sm font-semibold">Gerações ilimitadas — Premium</span>
             </div>
-            <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all"
-                style={{ width: `${((availableTrackGenerations ?? 0) / 3) * 100}%` }}
-              />
+          ) : isExhausted ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-amber-400">
+                <AlertTriangle className="size-4 shrink-0" />
+                <span className="text-sm font-semibold">Limite mensal atingido</span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Volta no próximo mês ou{' '}
+                <Link href="/dashboard/upgrade" className="text-primary font-semibold hover:underline underline-offset-4">
+                  faz upgrade para Premium
+                </Link>{' '}
+                para gerações ilimitadas.
+              </p>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-medium">
+                  {availableTrackGenerations} de 3 trilhas restantes este mês
+                </span>
+                <Link href="/dashboard/upgrade" className="text-primary font-semibold hover:underline underline-offset-4">
+                  Upgrade →
+                </Link>
+              </div>
+              <div className="h-1.5 bg-white/8 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-linear-to-r from-blue-500 to-violet-500 rounded-full transition-all duration-700"
+                  style={{ width: `${quotaPct}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
 
+        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <textarea
-            value={goal}
-            onChange={(e) => setGoal(e.target.value)}
-            maxLength={500}
-            rows={3}
-            placeholder="Ex: Quero aprender a pedir um aumento de salário"
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-foreground resize-none outline-none focus:border-blue-500/50"
-            disabled={loading || isExhausted}
-          />
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">{goal.length}/500</span>
-            <button
-              type="submit"
-              disabled={loading || !goal.trim() || isExhausted}
-              className="btn-gradient text-white text-sm font-semibold px-6 py-2.5 rounded-xl disabled:opacity-50"
-            >
-              {loading ? 'A IA está a criar a tua trilha...' : 'Gerar Trilha'}
-            </button>
+          <div className="relative">
+            <textarea
+              value={goal}
+              onChange={(e) => setGoal(e.target.value)}
+              maxLength={500}
+              rows={4}
+              placeholder="Ex: Quero aprender a pedir um aumento de salário de forma assertiva e confiante"
+              className="auth-input w-full bg-white/4 border border-white/10 rounded-2xl px-4 py-3.5 text-sm text-foreground placeholder:text-muted-foreground/40 resize-none"
+              disabled={loading || isExhausted}
+            />
+            <span className="absolute bottom-3 right-4 text-[10px] text-muted-foreground/50 font-medium pointer-events-none">
+              {goal.length}/500
+            </span>
           </div>
+
           {error && (
-            <p className="text-sm text-red-400 bg-red-400/10 border border-red-400/20 rounded-xl px-4 py-3">
+            <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3">
               {error}
             </p>
           )}
+
+          <button
+            type="submit"
+            disabled={loading || !goal.trim() || isExhausted}
+            className="relative w-full btn-gradient text-white text-sm font-semibold py-3 rounded-xl overflow-hidden group disabled:opacity-50 flex items-center justify-center gap-2"
+            style={{ boxShadow: '0 4px 24px oklch(0.50 0.22 264 / 30%)' }}
+          >
+            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-linear-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
+            {loading ? (
+              <>
+                <Sparkles className="size-4 relative animate-pulse" />
+                <span className="relative">A IA está a criar a tua trilha…</span>
+              </>
+            ) : (
+              <>
+                <span className="relative">Gerar Trilha</span>
+                <ArrowRight className="size-4 relative group-hover:translate-x-0.5 transition-transform" />
+              </>
+            )}
+          </button>
         </form>
       </div>
     </div>

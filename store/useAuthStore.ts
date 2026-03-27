@@ -28,16 +28,10 @@ export const useAuthStore = create<AuthState>()(
       setHasHydrated: (v) => set({ _hasHydrated: v }),
 
       setAuth: ({ token, userId, name, email }) => {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('kairo_token', token)
-        }
         set({ token, userId, name, email, isAuthenticated: true })
       },
 
       logout: () => {
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('kairo_token')
-        }
         set({ token: null, userId: null, name: null, email: null, isAuthenticated: false })
       },
     }),
